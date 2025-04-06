@@ -1,4 +1,4 @@
-package main
+package examples
 
 const (
 	A1 = iota
@@ -21,3 +21,19 @@ const (
 	Z1 = iota
 	Y1
 )
+
+func insideFuncConsts() {
+	const (
+		A1 = iota
+		B1
+
+		B2
+		A2
+
+		A3
+		B3
+
+		B4
+		A4
+	)
+}

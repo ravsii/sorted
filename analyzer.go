@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
-	"slices"
 
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
@@ -33,20 +32,14 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			return
 		}
 
-		if decl.Tok != token.CONST {
-			fmt.Println(decl.Tok.String(), "is not a const block")
+		if decl.Tok != token.CONST && decl.Tok != token.VAR {
+			fmt.Println(decl.Tok.String(), "is not a const / var block")
 			return
 		}
 
-		data := []string{}
-		lastLine := 0
-		startAt := token.Pos(0)
-
-		reset := func() {
-			data = []string{}
-			lastLine = 0
-			startAt = token.Pos(0)
-		}
+		lastLineName := ""
+		lastLaneNum := 0
+		startedAt := token.Pos(0)
 
 		for _, spec := range decl.Specs {
 			s, ok := spec.(*ast.ValueSpec)
@@ -56,34 +49,32 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 			pos := s.Pos()
 
-			curLine := pass.Fset.Position(s.Pos()).Line
-			if lastLine != 0 && curLine-lastLine > 1 {
-				if !slices.IsSorted(data) {
-					pass.Reportf(startAt, "this block is not alphabetically sorted")
-				}
-
-				reset()
-			}
-			lastLine = curLine
-
-			if startAt == 0 {
-				startAt = pos
+			if startedAt == 0 {
+				startedAt = pos
 			}
 
-			names := ""
+			curLineNames := ""
 			for _, name := range s.Names {
-				names += name.Name
-			}
-			data = append(data, names)
-
-		}
-
-		if len(data) > 0 {
-			if slices.IsSorted(data) {
-				return
+				curLineNames += name.Name
 			}
 
-			pass.Reportf(startAt, "this block is not alphabetically sorted")
+			curLine := pass.Fset.Position(s.Pos()).Line
+			if lastLaneNum != 0 && curLine-lastLaneNum > 1 {
+				lastLaneNum = curLine
+				lastLineName = curLineNames
+				startedAt = s.Pos()
+
+				continue
+			}
+
+			if lastLineName != "" && curLineNames < lastLineName {
+				pass.Reportf(startedAt, "this block is not alphabetically sorted")
+				pass.Reportf(s.Pos(), "here")
+			}
+
+			lastLaneNum = curLine
+			lastLineName = curLineNames
+
 		}
 	})
 

@@ -1,9 +1,11 @@
-package main
+package sorted_test
 
 import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/ravsii/sorted"
 
 	"golang.org/x/tools/go/analysis/analysistest"
 )
@@ -15,5 +17,5 @@ func TestAll(t *testing.T) {
 	}
 
 	testdata := filepath.Join(wd, "testdata")
-	analysistest.Run(t, testdata, analyzer, "p")
+	analysistest.Run(t, testdata, sorted.NewAnalyzer(), "p")
 }

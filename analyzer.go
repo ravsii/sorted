@@ -1,6 +1,7 @@
-package main
+package sorted
 
 import (
+	"flag"
 	"fmt"
 	"go/ast"
 	"go/token"
@@ -10,99 +11,120 @@ import (
 	"golang.org/x/tools/go/ast/inspector"
 )
 
-var analyzer = &analysis.Analyzer{
-	Name:     "goprintffuncname",
-	Doc:      "Checks that printf-like functions are named with `f` at the end.",
-	Run:      run,
-	Requires: []*analysis.Analyzer{inspect.Analyzer},
+type Runner struct {
+	inspector *inspector.Inspector
+	checker   *checker
 }
 
-func run(pass *analysis.Pass) (interface{}, error) {
-	inspector := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+func NewAnalyzer() *analysis.Analyzer {
+	var flagSet flag.FlagSet
+	_ = flagSet.Bool("test1", false, "test1")
 
-	nodeFilter := []ast.Node{ // filter needed nodes: visit only them
+	return &analysis.Analyzer{
+		Name:     "sorted",
+		Doc:      "Checks if blocks (structs, consts, vars) and functions are sorted",
+		Run:      (new(Runner)).Run,
+		Requires: []*analysis.Analyzer{inspect.Analyzer},
+		Flags:    flagSet,
+	}
+}
+
+func (r *Runner) Run(pass *analysis.Pass) (interface{}, error) {
+	r.inspector = pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+	r.checker = newChecker(pass)
+
+	filter := []ast.Node{
 		(*ast.GenDecl)(nil),
 		(*ast.SwitchStmt)(nil),
+		(*ast.StructType)(nil),
 	}
 
-	inspector.Preorder(nodeFilter, func(node ast.Node) {
-		switch n := node.(type) {
+	r.inspector.Preorder(filter, func(node ast.Node) {
+		switch node := node.(type) {
 		case *ast.GenDecl:
-			validateGenDecl(pass, n)
+			r.validateGenDecl(pass, node)
 		case *ast.SwitchStmt:
-			validateSwitchStmt(pass, n)
+			validateSwitchStmt(pass, node)
+		case *ast.StructType:
+			r.validateStruct(pass, node)
 		default:
-			fmt.Printf("unexpected type %T\n", n)
+			fmt.Printf("unexpected type %T\n", node)
 		}
 	})
 
 	return nil, nil
 }
 
-func validateGenDecl(pass *analysis.Pass, decl *ast.GenDecl) {
+func (r *Runner) validateStruct(pass *analysis.Pass, str *ast.StructType) {
+	if !str.Struct.IsValid() {
+		return
+	}
+
+	fields := str.Fields.List
+
+	if len(fields) == 0 {
+		return
+	}
+
+	nodes := make(nodes, len(fields))
+	for _, f := range fields {
+		nodes = append(nodes, node{
+			stard: f.Pos(),
+			end:   f.End(),
+			Names: f.Names,
+			Line:  pass.Fset.Position(f.Pos()).Line,
+		})
+	}
+
+	r.checker.Check(nodes)
+}
+
+func (r *Runner) validateGenDecl(pass *analysis.Pass, decl *ast.GenDecl) {
 	if !decl.Lparen.IsValid() {
-		fmt.Println(decl.Tok.String(), "is invalid")
 		return
 	}
 
 	if decl.Tok != token.CONST && decl.Tok != token.VAR {
-		fmt.Println(decl.Tok.String(), "is not a const / var block")
 		return
 	}
 
-	lastLineName := ""
-	lastLaneNum := 0
-	startedAt := token.Pos(0)
+	specs := decl.Specs
+	if len(specs) == 0 {
+		return
+	}
 
-	for _, spec := range decl.Specs {
-		s, ok := spec.(*ast.ValueSpec)
+	nodes := make(nodes, len(specs))
+	for _, spec := range specs {
+		val, ok := spec.(*ast.ValueSpec)
 		if !ok {
 			continue
 		}
 
-		pos := s.Pos()
-
-		if startedAt == 0 {
-			startedAt = pos
-		}
-
-		curLineNames := ""
-		for _, name := range s.Names {
-			curLineNames += name.Name
-		}
-
-		curLine := pass.Fset.Position(s.Pos()).Line
-		if lastLaneNum != 0 && curLine-lastLaneNum > 1 {
-			lastLaneNum = curLine
-			lastLineName = curLineNames
-			startedAt = s.Pos()
-
-			continue
-		}
-
-		if lastLineName != "" && curLineNames < lastLineName {
-			pass.Reportf(startedAt, "this block is not alphabetically sorted")
-			pass.Reportf(s.Pos(), "here")
-		}
-
-		lastLaneNum = curLine
-		lastLineName = curLineNames
-
+		nodes = append(nodes, node{
+			stard: spec.Pos(),
+			end:   spec.End(),
+			Names: val.Names,
+			Line:  pass.Fset.Position(spec.Pos()).Line,
+		})
 	}
+
+	r.checker.Check(nodes)
 }
 
 func validateSwitchStmt(pass *analysis.Pass, stmt *ast.SwitchStmt) {
-	if !stmt.Switch.IsValid() {
-		fmt.Println("switch statement at", stmt.Pos(), "is invalid")
-		return
-	}
+	// TODO: this
 
-	for _, b := range stmt.Body.List {
-		b := b.(*ast.CaseClause)
-		for _, e := range b.List {
-			fmt.Printf("%T", e)
-		}
-	}
+	// if !stmt.Switch.IsValid() {
+	// 	fmt.Println("switch statement at", stmt.Pos(), "is invalid")
+	// 	return
+	// }
+	//
+	// for _, b := range stmt.Body.List {
+	// 	b := b.(*ast.CaseClause)
+	// 	for _, e := range b.List {
+	// 		fmt.Printf("%T", e)
+	// 	}
+	// }
 
 	// lastLineName := ""
 	// lastLaneNum := 0

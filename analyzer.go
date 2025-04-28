@@ -29,14 +29,14 @@ func NewAnalyzer() *analysis.Analyzer {
 	}
 }
 
-func (r *Runner) Run(pass *analysis.Pass) (interface{}, error) {
+func (r *Runner) Run(pass *analysis.Pass) (any, error) {
 	r.inspector = pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
 	r.checker = newChecker(pass)
 
 	filter := []ast.Node{
 		(*ast.GenDecl)(nil),
-		(*ast.SwitchStmt)(nil),
 		(*ast.StructType)(nil),
+		// (*ast.SwitchStmt)(nil),
 	}
 
 	r.inspector.Preorder(filter, func(node ast.Node) {

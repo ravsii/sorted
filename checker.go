@@ -3,6 +3,7 @@ package sorted
 import (
 	"go/ast"
 	"go/token"
+	"slices"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -15,9 +16,9 @@ type (
 		Line       int
 	}
 
-	// Reported is pretty much an abstraction for [analysis.Pass] so it could be
-	// easily unit-tested for integration with [analysis.Pass], not the actual
-	// linter tests.
+	// Reported is pretty much an abstraction for [analysis.Pass] so it could
+	// be easily unit-tested for integration with [analysis.Pass], not the
+	// actual linter tests.
 	Reporter interface {
 		Reportf(pos token.Pos, format string, args ...any)
 		ReportRangef(rng analysis.Range, format string, args ...any)
@@ -33,7 +34,7 @@ func newChecker(r Reporter) *checker {
 }
 
 func (c *checker) Check(nodes nodes) {
-	lastLineName := ""
+	lastLineIdent := ""
 	lastLaneNum := 0
 	startedAt := token.Pos(0)
 
@@ -44,27 +45,40 @@ func (c *checker) Check(nodes nodes) {
 			startedAt = pos
 		}
 
-		curLineNames := ""
-		for _, name := range node.Names {
-			curLineNames += name.Name
+		c.checkNames(node.Names)
+		firstIdent := ""
+		if len(node.Names) > 0 {
+			firstIdent = node.Names[0].String()
 		}
 
 		curLine := node.Line
 		if lastLaneNum != 0 && curLine-lastLaneNum > 1 {
 			lastLaneNum = curLine
-			lastLineName = curLineNames
+			lastLineIdent = firstIdent
 			startedAt = node.stard
 
 			continue
 		}
 
-		if lastLineName != "" && curLineNames < lastLineName {
+		if lastLineIdent != "" && firstIdent < lastLineIdent {
 			c.r.Reportf(startedAt, "this block is not alphabetically sorted")
 			c.r.Reportf(node.stard, "here")
 		}
 
 		lastLaneNum = curLine
-		lastLineName = curLineNames
+		lastLineIdent = firstIdent
 
+	}
+}
+
+func (c *checker) checkNames(names []*ast.Ident) {
+	if len(names) < 2 {
+		return
+	}
+
+	identStrings := identsToStrings(names)
+	if !slices.IsSorted(identStrings) {
+		iRange := newIdentRange(names[0], names[len(names)-1])
+		c.r.ReportRangef(iRange, "these values are not sorted alphabetically")
 	}
 }

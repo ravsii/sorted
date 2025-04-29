@@ -1,7 +1,7 @@
-examples:
-	go run ./cmd/sorted/main.go -- ./examples/...
+build:
+	go build -o ./build/sorted ./cmd/sorted/main.go
 
 test:
-	go test ./...
+	go test -race ./...
 
-.PHONY: examples
+.PHONY: build test

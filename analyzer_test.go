@@ -16,6 +16,6 @@ func TestAll(t *testing.T) {
 		t.Fatalf("Failed to get wd: %s", err)
 	}
 
-	testdata := filepath.Join(wd, "testdata")
-	analysistest.Run(t, testdata, sorted.NewAnalyzer(), "p")
+	testdata := filepath.Join(wd, "tests")
+	analysistest.Run(t, testdata, sorted.NewAnalyzer(), "tests")
 }

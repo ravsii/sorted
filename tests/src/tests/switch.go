@@ -1,4 +1,4 @@
-package examples
+package tests
 
 func test() {
 	var a string

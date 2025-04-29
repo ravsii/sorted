@@ -11,9 +11,9 @@ import (
 type (
 	nodes []node
 	node  struct {
-		stard, end token.Pos
-		Names      []*ast.Ident
-		Line       int
+		blockStart, stard, end token.Pos
+		Names                  []*ast.Ident
+		Line                   int
 	}
 
 	// Reported is pretty much an abstraction for [analysis.Pass] so it could
@@ -45,7 +45,7 @@ func (c *checker) Check(nodes nodes) {
 			startedAt = pos
 		}
 
-		c.checkNames(node.Names)
+		c.CheckNames(node.Names)
 		firstIdent := ""
 		if len(node.Names) > 0 {
 			firstIdent = node.Names[0].String()
@@ -71,7 +71,7 @@ func (c *checker) Check(nodes nodes) {
 	}
 }
 
-func (c *checker) checkNames(names []*ast.Ident) {
+func (c *checker) CheckNames(names []*ast.Ident) {
 	if len(names) < 2 {
 		return
 	}

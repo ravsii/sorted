@@ -80,10 +80,6 @@ func (r *Runner) validateStruct(pass *analysis.Pass, str *ast.StructType) {
 }
 
 func (r *Runner) validateGenDecl(pass *analysis.Pass, decl *ast.GenDecl) {
-	if !decl.Lparen.IsValid() {
-		return
-	}
-
 	if decl.Tok != token.CONST && decl.Tok != token.VAR {
 		return
 	}
@@ -101,10 +97,11 @@ func (r *Runner) validateGenDecl(pass *analysis.Pass, decl *ast.GenDecl) {
 		}
 
 		nodes = append(nodes, node{
-			stard: spec.Pos(),
-			end:   spec.End(),
-			Names: val.Names,
-			Line:  pass.Fset.Position(spec.Pos()).Line,
+			blockStart: decl.Pos(),
+			stard:      spec.Pos(),
+			end:        spec.End(),
+			Names:      val.Names,
+			Line:       pass.Fset.Position(spec.Pos()).Line,
 		})
 	}
 

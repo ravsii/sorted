@@ -1,43 +1,30 @@
 package tests
 
+const A1 = 0
+
 const (
-	A1 = iota
-	B1
+	A2 = iota
+	B2
+)
 
-	B2 // want `B2, A2 are not sorted alphabetically`
-	A2
-
+const (
+	B3 = iota // want `B3, A3 are not sorted alphabetically`
 	A3
-	B3
-
-	B4 // want `B4, A4 are not sorted alphabetically`
-	A4
-
-	A5, B5, C5 = 0, 0, 0
-	C6, B6, A6 = 0, 0, 0 // want `single line idents are not sorted alphabetically`
 )
 
 const (
-	Z = iota // want `Y, X are not sorted alphabetically` `Z, Y are not sorted alphabetically`
-	Y
-	X
+	A4 = iota
+	B4
 
-	Z1 = iota // want `Z1, X1 are not sorted alphabetically`
-	X1
+	B5 // want `B5, A5 are not sorted alphabetically`
+	A5
 )
 
-func insideFunc() {
-	const (
-		A1 = iota
-		B1
+const (
+	A6, B6, C6 = 0, 0, 0
+	C7, B7, A7 = 0, 0, 0 // want `single line idents are not sorted alphabetically`
+)
 
-		B2 // want `B2, A2 are not sorted alphabetically`
-		A2
+const A8, B8, C8 = 0, 0, 0
 
-		A3
-		B3
-
-		B4 // want `B4, A4 are not sorted alphabetically`
-		A4
-	)
-}
+const C9, B9, A9 = 0, 0, 0 // want `single line idents are not sorted alphabetically`

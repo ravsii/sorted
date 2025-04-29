@@ -1,17 +1,17 @@
 package tests
 
-type typeX struct {
-	A string
-	B string
+type (
+	type1 struct{}
+	type2 struct{ a string }
+	type3 struct{ a, b string }
+	type4 struct{ b, a string } // want `single line idents are not sorted alphabetically`
 
-	B1 string // want `B1, A1 are not sorted alphabetically`
-	A1 string
-
-	A2, B2, C2 string
-	C3, B3, A3 string // want `single line idents are not sorted alphabetically`
-}
-
-type typeZ struct {
-	B string // want `B, A are not sorted alphabetically`
-	A string
-}
+	type5 struct {
+		a, b string
+		d, c string // want `single line idents are not sorted alphabetically`
+	}
+	type6 struct {
+		b string // want `b, a are not sorted alphabetically`
+		a string
+	}
+)

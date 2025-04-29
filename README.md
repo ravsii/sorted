@@ -1,28 +1,39 @@
 # Sorted [![Build](https://github.com/ravsii/sorted/actions/workflows/build.yml/badge.svg)](https://github.com/ravsii/sorted/actions/workflows/build.yml) [![Test](https://github.com/ravsii/sorted/actions/workflows/test.yml/badge.svg)](https://github.com/ravsii/sorted/actions/workflows/test.yml)
 
-Go linter that helps your to keep everything sorted
+`sorted` is the linter for keeping everything sorted.
 
-it can sort your consts
+At the moment it only checks for a few things, with plans for checking
+everything that could be checked for any sort of ordering.
 
-```go
-const (
- A1 = iota
- B1
+## So what's working?
 
- B2 // error
- A2
+It can be generalized into 2 main categories for now, that are
 
- A3
- B3
+- Blocks
 
- B4 // error
- A4
-)
-```
+  ```go
+  const (
+      B = iota // B, A are not sorted alphabetically
+      A
+  )
+  ```
 
-TODO:
+- Multiple inline identifiers
 
-- consts
-- var blocks
-- global funcs
-- something else
+  ```go
+  const c, b, a = 0, 0, 0 // single line idents are not sorted alphabetically
+  ```
+
+## TODO
+
+- [ ] Options for turning stuff on/off
+- [x] `const`, `var`
+  - Alphabetical sorting
+- [x] `struct`
+  - Alphabetical sorting
+- [ ] `switch` (maybe?)
+- [ ] `imports` (pretty much what gci does with some more)
+- [ ] `func`
+  - Alphabetical sorting
+  - Public/Private sorting
+- [ ] Generics

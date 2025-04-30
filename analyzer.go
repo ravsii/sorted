@@ -1,7 +1,6 @@
 package sorted
 
 import (
-	"flag"
 	"fmt"
 	"go/ast"
 	"go/token"
@@ -14,19 +13,24 @@ import (
 type Runner struct {
 	inspector *inspector.Inspector
 	checker   *checker
+	config    *RunnerConfig
 }
 
 func NewAnalyzer() *analysis.Analyzer {
-	var flagSet flag.FlagSet
-	_ = flagSet.Bool("test1", false, "test1")
+	flagSet, config := initConfigFromFlags()
+	runner := NewRunner(config)
 
 	return &analysis.Analyzer{
 		Name:     "sorted",
 		Doc:      "Checks if blocks (structs, consts, vars) and functions are sorted",
-		Run:      (new(Runner)).Run,
+		Run:      runner.Run,
 		Requires: []*analysis.Analyzer{inspect.Analyzer},
 		Flags:    flagSet,
 	}
+}
+
+func NewRunner(c *RunnerConfig) Runner {
+	return Runner{config: c}
 }
 
 func (r *Runner) Run(pass *analysis.Pass) (any, error) {
@@ -36,7 +40,8 @@ func (r *Runner) Run(pass *analysis.Pass) (any, error) {
 	filter := []ast.Node{
 		(*ast.GenDecl)(nil),
 		(*ast.StructType)(nil),
-		// (*ast.SwitchStmt)(nil),
+		(*ast.FuncType)(nil),
+		(*ast.SwitchStmt)(nil),
 	}
 
 	r.inspector.Preorder(filter, func(node ast.Node) {
@@ -47,6 +52,8 @@ func (r *Runner) Run(pass *analysis.Pass) (any, error) {
 			validateSwitchStmt(pass, node)
 		case *ast.StructType:
 			r.validateStruct(pass, node)
+		case *ast.FuncType:
+			r.validateFuncDecl(pass, node)
 		default:
 			fmt.Printf("unexpected type %T\n", node)
 		}
@@ -80,7 +87,7 @@ func (r *Runner) validateStruct(pass *analysis.Pass, str *ast.StructType) {
 }
 
 func (r *Runner) validateGenDecl(pass *analysis.Pass, decl *ast.GenDecl) {
-	if decl.Tok != token.CONST && decl.Tok != token.VAR {
+	if !r.genDeclShouldBeChecked(decl) {
 		return
 	}
 
@@ -106,6 +113,47 @@ func (r *Runner) validateGenDecl(pass *analysis.Pass, decl *ast.GenDecl) {
 	}
 
 	r.checker.Check(nodes)
+}
+
+func (r *Runner) validateFuncDecl(pass *analysis.Pass, f *ast.FuncType) { //nolint:unused
+	if f == nil {
+		return
+	}
+
+	_ = f.TypeParams
+}
+
+func (r *Runner) validateGenerics(pass *analysis.Pass, typeParams *ast.FieldList) { //nolint:unused
+	if typeParams == nil {
+		return
+	}
+
+	fields := typeParams.List
+	if len(fields) == 0 {
+		return
+	}
+
+	nodes := make(nodes, len(fields))
+	for _, field := range fields {
+		nodes = append(nodes, node{
+			// blockStart: decl.Pos(),
+			// stard:      field.Pos(),
+			// end:        field.End(),
+			// Names:      val.Names,
+			Line: pass.Fset.Position(field.Pos()).Line,
+		})
+	}
+
+	r.checker.Check(nodes)
+}
+
+func (r *Runner) genDeclShouldBeChecked(decl *ast.GenDecl) bool {
+	if decl.Tok == token.CONST && r.config.CheckConst ||
+		decl.Tok == token.VAR && r.config.CheckVar {
+		return true
+	}
+
+	return false
 }
 
 func validateSwitchStmt(pass *analysis.Pass, stmt *ast.SwitchStmt) {

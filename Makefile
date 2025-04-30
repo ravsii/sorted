@@ -5,6 +5,9 @@ install:
 	go install ./cmd/sorted/sorted.go
 
 test:
-	go test -race ./...
+	go test -race ./... -args --check-const
 
-.PHONY: build test
+help:
+	go run ./cmd/sorted/sorted.go --help
+
+.PHONY: build install test help

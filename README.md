@@ -14,9 +14,25 @@ It can be generalized into 2 main categories for now, that are
 - Blocks
 
   ```go
-  const (
-      B = iota // B, A are not sorted alphabetically
-      A
+  const ( // or var
+    B = iota // B, A are not sorted alphabetically
+    A
+  )
+  ```
+
+- Multiple sections treated as such
+
+  ```go
+  const ( // or var
+    B = iota // B, A are not sorted alphabetically
+    A
+
+    C // ok
+    D
+
+    Z // Z, Y are not sorted alphabetically
+    Y
+    X
   )
   ```
 

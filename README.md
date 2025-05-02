@@ -30,7 +30,8 @@ These checks are working for `const`, `var`, `struct` blocks.
 
 ## TODO
 
-- [ ] Options for turning stuff on/off
+- [x] Options for turning stuff on/off
+  - Partially done, more options will be added later
 - [x] `const`, `var`
   - [x] Alphabetical sorting
 - [x] `struct`

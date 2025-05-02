@@ -46,6 +46,7 @@ func (c *checker) Check(nodes nodes) {
 		}
 
 		c.CheckNames(node.Names)
+
 		firstIdent := ""
 		if len(node.Names) > 0 {
 			firstIdent = node.Names[0].String()
@@ -67,7 +68,6 @@ func (c *checker) Check(nodes nodes) {
 
 		lastLaneNum = curLine
 		lastLineIdent = firstIdent
-
 	}
 }
 
@@ -79,6 +79,9 @@ func (c *checker) CheckNames(names []*ast.Ident) {
 	identStrings := identsToStrings(names)
 	if !slices.IsSorted(identStrings) {
 		iRange := newIdentRange(names[0], names[len(names)-1])
-		c.r.ReportRangef(iRange, "single line idents are not sorted alphabetically")
+		c.r.ReportRangef(
+			iRange,
+			"single line idents are not sorted alphabetically",
+		)
 	}
 }

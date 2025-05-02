@@ -4,6 +4,7 @@ package tests
 
 func test() {
 	var a string
+
 	var b string
 
 	switch a {

@@ -16,17 +16,57 @@ type Runner struct {
 	config    *RunnerConfig
 }
 
-func NewAnalyzer() *analysis.Analyzer {
-	flagSet, config := initConfigFromFlags()
-	runner := NewRunner(config)
-
-	return &analysis.Analyzer{
+// default behaviour and explicit config.
+func NewAnalyzer(config *RunnerConfig) *analysis.Analyzer {
+	analyzer := &analysis.Analyzer{
 		Name:     "sorted",
 		Doc:      "Checks if blocks (structs, consts, vars) and functions are sorted",
-		Run:      runner.Run,
 		Requires: []*analysis.Analyzer{inspect.Analyzer},
-		Flags:    flagSet,
 	}
+
+	if config == nil {
+		config = &RunnerConfig{}
+
+		analyzer.Flags.BoolVar(&config.All,
+			"all", false, "Enable all checks")
+
+		analyzer.Flags.BoolVar(&config.CheckConst,
+			"check-const", false, "Check const() blocks")
+		analyzer.Flags.BoolVar(
+			&config.CheckConstSingleLine,
+			"check-const-single-line",
+			false,
+			"Check const blocks for multiple identifiers in a single line",
+		)
+
+		analyzer.Flags.BoolVar(&config.CheckVar,
+			"check-var", false, "Check var() blocks")
+		analyzer.Flags.BoolVar(
+			&config.CheckVarSingleLine,
+			"check-var-single-line",
+			false,
+			"Check var blocks for multiple identifiers in a single line",
+		)
+
+		analyzer.Flags.BoolVar(&config.CheckStruct,
+			"check-struct", false, "Check struct field order")
+	}
+
+	if config.All {
+		config = &RunnerConfig{ //exhaustive:enforce
+			All:                  true,
+			CheckConst:           true,
+			CheckConstSingleLine: true,
+			CheckVar:             true,
+			CheckVarSingleLine:   true,
+			CheckStruct:          true,
+		}
+	}
+
+	runner := NewRunner(config)
+	analyzer.Run = runner.Run
+
+	return analyzer
 }
 
 func NewRunner(c *RunnerConfig) Runner {
@@ -34,7 +74,13 @@ func NewRunner(c *RunnerConfig) Runner {
 }
 
 func (r *Runner) Run(pass *analysis.Pass) (any, error) {
-	r.inspector = pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+	var ok bool
+
+	r.inspector, ok = pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+	if !ok {
+		panic("bad inspector")
+	}
+
 	r.checker = newChecker(pass)
 
 	filter := []ast.Node{
@@ -97,6 +143,7 @@ func (r *Runner) validateGenDecl(pass *analysis.Pass, decl *ast.GenDecl) {
 	}
 
 	nodes := make(nodes, len(specs))
+
 	for _, spec := range specs {
 		val, ok := spec.(*ast.ValueSpec)
 		if !ok {
@@ -115,7 +162,7 @@ func (r *Runner) validateGenDecl(pass *analysis.Pass, decl *ast.GenDecl) {
 	r.checker.Check(nodes)
 }
 
-func (r *Runner) validateFuncDecl(pass *analysis.Pass, f *ast.FuncType) { //nolint:unused
+func (r *Runner) validateFuncDecl(_ *analysis.Pass, f *ast.FuncType) {
 	if f == nil {
 		return
 	}
@@ -123,7 +170,7 @@ func (r *Runner) validateFuncDecl(pass *analysis.Pass, f *ast.FuncType) { //noli
 	_ = f.TypeParams
 }
 
-func (r *Runner) validateGenerics(pass *analysis.Pass, typeParams *ast.FieldList) { //nolint:unused
+func (r *Runner) validateGenerics(pass *analysis.Pass, typeParams *ast.FieldList) {
 	if typeParams == nil {
 		return
 	}

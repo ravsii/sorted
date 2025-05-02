@@ -1,9 +1,11 @@
 # Sorted [![Build](https://github.com/ravsii/sorted/actions/workflows/build.yml/badge.svg)](https://github.com/ravsii/sorted/actions/workflows/build.yml) [![Test](https://github.com/ravsii/sorted/actions/workflows/test.yml/badge.svg)](https://github.com/ravsii/sorted/actions/workflows/test.yml)
 
-`sorted` is the linter for keeping everything sorted.
+sorted is a linter and formatter used to maintain consistent sorting across
+various structures.
 
-At the moment it only checks for a few things, with plans for checking
-everything that could be checked for any sort of ordering.
+At the moment it only supports alphabetic sorting in `const`, `var` and
+`struct` blocks, but we're aiming to support any kind of sortable or
+order-related structures like `generics`, `func` in/out arguments and more.
 
 ## So what's working?
 
@@ -24,16 +26,19 @@ It can be generalized into 2 main categories for now, that are
   const c, b, a = 0, 0, 0 // single line idents are not sorted alphabetically
   ```
 
+These checks are working for `const`, `var`, `struct` blocks.
+
 ## TODO
 
 - [ ] Options for turning stuff on/off
 - [x] `const`, `var`
-  - Alphabetical sorting
+  - [x] Alphabetical sorting
 - [x] `struct`
-  - Alphabetical sorting
+  - [x] Alphabetical sorting
 - [ ] `switch` (maybe?)
 - [ ] `imports` (pretty much what gci does with some more)
 - [ ] `func`
   - Alphabetical sorting
   - Public/Private sorting
+  - `New*` func order
 - [ ] Generics

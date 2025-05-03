@@ -28,7 +28,10 @@ func NewAnalyzer(config *RunnerConfig) *analysis.Analyzer {
 		config = &RunnerConfig{}
 
 		analyzer.Flags.BoolVar(&config.All,
-			"all", false, "Enable all checks")
+			"check-all", true, "Enable all checks")
+
+		analyzer.Flags.BoolVar(&config.Fix,
+			"fix-issues", false, "Fix found issues")
 
 		analyzer.Flags.BoolVar(&config.CheckConst,
 			"check-const", false, "Check const() blocks")
@@ -60,6 +63,8 @@ func NewAnalyzer(config *RunnerConfig) *analysis.Analyzer {
 			CheckVar:             true,
 			CheckVarSingleLine:   true,
 			CheckStruct:          true,
+
+			Fix: false,
 		}
 	}
 
@@ -81,7 +86,7 @@ func (r *Runner) Run(pass *analysis.Pass) (any, error) {
 		panic("bad inspector")
 	}
 
-	r.checker = newChecker(pass)
+	r.checker = newChecker(pass, pass)
 
 	filter := []ast.Node{
 		(*ast.GenDecl)(nil),
@@ -151,15 +156,18 @@ func (r *Runner) validateGenDecl(pass *analysis.Pass, decl *ast.GenDecl) {
 		}
 
 		nodes = append(nodes, node{
-			blockStart: decl.Pos(),
-			stard:      spec.Pos(),
-			end:        spec.End(),
-			Names:      val.Names,
-			Line:       pass.Fset.Position(spec.Pos()).Line,
+			stard:  spec.Pos(),
+			end:    spec.End(),
+			Names:  val.Names,
+			Values: val.Values,
+			Line:   pass.Fset.Position(spec.Pos()).Line,
 		})
 	}
 
 	r.checker.Check(nodes)
+	//	if r.config.Fix {
+	//		fixNodes(pass, nodes)
+	//	}
 }
 
 func (r *Runner) validateFuncDecl(_ *analysis.Pass, f *ast.FuncType) {
@@ -204,8 +212,6 @@ func (r *Runner) genDeclShouldBeChecked(decl *ast.GenDecl) bool {
 }
 
 func validateSwitchStmt(pass *analysis.Pass, stmt *ast.SwitchStmt) {
-	// TODO: this
-
 	// if !stmt.Switch.IsValid() {
 	// 	fmt.Println("switch statement at", stmt.Pos(), "is invalid")
 	// 	return

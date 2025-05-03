@@ -1,9 +1,12 @@
 package sorted
 
 import (
+	"bytes"
 	"go/ast"
+	"go/format"
 	"go/token"
 	"slices"
+	"strings"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -11,26 +14,30 @@ import (
 type (
 	nodes []node
 	node  struct {
-		blockStart, stard, end token.Pos
-		Names                  []*ast.Ident
-		Line                   int
+		stard, end token.Pos
+		Names      []*ast.Ident
+		Values     []ast.Expr
+		Line       int
 	}
 
-	// Reported is pretty much an abstraction for [analysis.Pass] so it could
-	// be easily unit-tested for integration with [analysis.Pass], not the
-	// actual linter tests.
-	Reporter interface {
+	// Deprecated: use [Reporter].
+	ReporterOld interface {
 		Reportf(pos token.Pos, format string, args ...any)
 		ReportRangef(rng analysis.Range, format string, args ...any)
 	}
+
+	Reporter func(analysis.Diagnostic)
 )
 
 type checker struct {
-	r Reporter
+	// Deprecated: use r
+	reportedOld ReporterOld
+
+	reporter *analysis.Pass
 }
 
-func newChecker(r Reporter) *checker {
-	return &checker{r: r}
+func newChecker(r *analysis.Pass, old ReporterOld) *checker {
+	return &checker{reporter: r, reportedOld: old}
 }
 
 func (c *checker) Check(nodes nodes) {
@@ -45,7 +52,7 @@ func (c *checker) Check(nodes nodes) {
 			startedAt = pos
 		}
 
-		c.CheckNames(node.Names)
+		c.CheckSingleLine(node.Names, node.Values)
 
 		firstIdent := ""
 		if len(node.Names) > 0 {
@@ -62,7 +69,7 @@ func (c *checker) Check(nodes nodes) {
 		}
 
 		if lastLineIdent != "" && firstIdent < lastLineIdent {
-			c.r.Reportf(startedAt, `%s, %s are not sorted alphabetically`,
+			c.reportedOld.Reportf(startedAt, `%s, %s are not sorted alphabetically`,
 				lastLineIdent, firstIdent)
 		}
 
@@ -71,17 +78,72 @@ func (c *checker) Check(nodes nodes) {
 	}
 }
 
-func (c *checker) CheckNames(names []*ast.Ident) {
+func (c *checker) CheckSingleLine(names []*ast.Ident, values []ast.Expr) {
 	if len(names) < 2 {
 		return
 	}
 
+	pairs := make([]declPair, len(names))
+	for i := range names {
+		pairs[i] = declPair{
+			name:  names[i],
+			value: values[i],
+		}
+	}
+
+	// Sort by identifier name
+	slices.SortFunc(pairs, func(a, b declPair) int {
+		return strings.Compare(a.name.Name, b.name.Name)
+	})
+
+	// Reconstruct sorted names and values as source code
+	var buf bytes.Buffer
+
+	for i, p := range pairs {
+		if i > 0 {
+			buf.WriteString(", ")
+		}
+
+		buf.WriteString(p.name.Name)
+	}
+
+	buf.WriteString(" := ")
+
+	for i, p := range pairs {
+		if i > 0 {
+			buf.WriteString(", ")
+		}
+		// Convert ast.Expr back to source
+		var valBuf bytes.Buffer
+		if err := format.Node(&valBuf, c.reporter.Fset, p.value); err != nil {
+			return // or handle error
+		}
+
+		buf.Write(valBuf.Bytes())
+	}
+
 	identStrings := identsToStrings(names)
 	if !slices.IsSorted(identStrings) {
-		iRange := newIdentRange(names[0], names[len(names)-1])
-		c.r.ReportRangef(
-			iRange,
-			"single line idents are not sorted alphabetically",
-		)
+		start := names[0].Pos()
+		end := values[len(values)-1].End()
+
+		c.reporter.Report(analysis.Diagnostic{
+			Pos:     start,
+			End:     end,
+			Message: "single line idents are not sorted alphabetically",
+			SuggestedFixes: []analysis.SuggestedFix{{
+				Message: "Sort declarations alphabetically",
+				TextEdits: []analysis.TextEdit{{
+					Pos:     start,
+					End:     end,
+					NewText: buf.Bytes(),
+				}},
+			}},
+		})
 	}
+}
+
+type declPair struct {
+	name  *ast.Ident
+	value ast.Expr
 }

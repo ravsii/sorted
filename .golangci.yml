@@ -10,17 +10,11 @@ issues:
   fix: true
 
 output:
-  formats:
-    text:
-      path: stdout
-      print-linter-name: true
-      print-issued-lines: true
-      colors: true
   sort-order:
     - linter
     - severity
     - file
-  show-stats: true
+  show-stats: false
 
 linters:
   default: none

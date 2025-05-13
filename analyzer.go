@@ -30,9 +30,6 @@ func NewAnalyzer(config *RunnerConfig) *analysis.Analyzer {
 		analyzer.Flags.BoolVar(&config.All,
 			"check-all", true, "Enable all checks")
 
-		analyzer.Flags.BoolVar(&config.Fix,
-			"fix-issues", false, "Fix found issues")
-
 		analyzer.Flags.BoolVar(&config.CheckConst,
 			"check-const", false, "Check const() blocks")
 		analyzer.Flags.BoolVar(
@@ -63,8 +60,6 @@ func NewAnalyzer(config *RunnerConfig) *analysis.Analyzer {
 			CheckVar:             true,
 			CheckVarSingleLine:   true,
 			CheckStruct:          true,
-
-			Fix: false,
 		}
 	}
 
@@ -89,6 +84,7 @@ func (r *Runner) Run(pass *analysis.Pass) (any, error) {
 	r.checker = newChecker(pass, pass)
 
 	filter := []ast.Node{
+		(*ast.AssignStmt)(nil),
 		(*ast.GenDecl)(nil),
 		(*ast.StructType)(nil),
 		(*ast.FuncType)(nil),
@@ -97,6 +93,8 @@ func (r *Runner) Run(pass *analysis.Pass) (any, error) {
 
 	r.inspector.Preorder(filter, func(node ast.Node) {
 		switch node := node.(type) {
+		case *ast.AssignStmt:
+			r.validateAssignStmt(pass, node)
 		case *ast.GenDecl:
 			r.validateGenDecl(pass, node)
 		case *ast.SwitchStmt:
@@ -137,6 +135,39 @@ func (r *Runner) validateStruct(pass *analysis.Pass, str *ast.StructType) {
 	r.checker.Check(nodes)
 }
 
+func (r *Runner) validateAssignStmt(pass *analysis.Pass, decl *ast.AssignStmt) {
+	specs := decl.Lhs
+	if len(specs) == 0 {
+		return
+	}
+
+	switch decl.Tok {
+	case token.DEFINE: // :=
+	case token.ASSIGN: // =
+	default:
+		return
+	}
+
+	nodes := make(nodes, len(specs))
+
+	// for _, spec := range specs {
+	// 	val, ok := spec.(*ast.ValueSpec)
+	// 	if !ok {
+	// 		continue
+	// 	}
+	//
+	// 	nodes = append(nodes, node{
+	// 		stard:  spec.Pos(),
+	// 		end:    spec.End(),
+	// 		Names:  val.Names,
+	// 		Values: val.Values,
+	// 		Line:   pass.Fset.Position(spec.Pos()).Line,
+	// 	})
+	// }
+	//
+	r.checker.Check(nodes)
+}
+
 func (r *Runner) validateGenDecl(pass *analysis.Pass, decl *ast.GenDecl) {
 	if !r.genDeclShouldBeChecked(decl) {
 		return
@@ -165,9 +196,6 @@ func (r *Runner) validateGenDecl(pass *analysis.Pass, decl *ast.GenDecl) {
 	}
 
 	r.checker.Check(nodes)
-	//	if r.config.Fix {
-	//		fixNodes(pass, nodes)
-	//	}
 }
 
 func (r *Runner) validateFuncDecl(_ *analysis.Pass, f *ast.FuncType) {

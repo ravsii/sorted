@@ -78,16 +78,28 @@ func (c *checker) Check(nodes nodes) {
 	}
 }
 
+type declPair struct {
+	name  *ast.Ident
+	value ast.Expr
+}
+
 func (c *checker) CheckSingleLine(names []*ast.Ident, values []ast.Expr) {
 	if len(names) < 2 {
+		return
+	}
+
+	hasValues := len(values) > 0
+	if hasValues && len(names) != len(values) {
 		return
 	}
 
 	pairs := make([]declPair, len(names))
 	for i := range names {
 		pairs[i] = declPair{
-			name:  names[i],
-			value: values[i],
+			name: names[i],
+		}
+		if hasValues {
+			pairs[i].value = values[i]
 		}
 	}
 
@@ -107,25 +119,34 @@ func (c *checker) CheckSingleLine(names []*ast.Ident, values []ast.Expr) {
 		buf.WriteString(p.name.Name)
 	}
 
-	buf.WriteString(" := ")
+	if hasValues {
+		buf.WriteString(" := ")
 
-	for i, p := range pairs {
-		if i > 0 {
-			buf.WriteString(", ")
-		}
-		// Convert ast.Expr back to source
-		var valBuf bytes.Buffer
-		if err := format.Node(&valBuf, c.reporter.Fset, p.value); err != nil {
-			return // or handle error
-		}
+		for i, p := range pairs {
+			if i > 0 {
+				buf.WriteString(", ")
+			}
+			// Convert ast.Expr back to source
+			var valBuf bytes.Buffer
+			if err := format.Node(&valBuf, c.reporter.Fset, p.value); err != nil {
+				return // or handle error
+			}
 
-		buf.Write(valBuf.Bytes())
+			buf.Write(valBuf.Bytes())
+		}
 	}
 
 	identStrings := identsToStrings(names)
 	if !slices.IsSorted(identStrings) {
 		start := names[0].Pos()
-		end := values[len(values)-1].End()
+
+		var end token.Pos
+
+		if hasValues {
+			end = values[len(values)-1].End()
+		} else {
+			end = names[len(names)-1].End()
+		}
 
 		c.reporter.Report(analysis.Diagnostic{
 			Pos:     start,
@@ -141,9 +162,4 @@ func (c *checker) CheckSingleLine(names []*ast.Ident, values []ast.Expr) {
 			}},
 		})
 	}
-}
-
-type declPair struct {
-	name  *ast.Ident
-	value ast.Expr
 }

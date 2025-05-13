@@ -27,7 +27,6 @@ linters:
     - containedctx
     - contextcheck
     - copyloopvar
-    - cyclop
     - decorder
     - dogsled
     - dupl

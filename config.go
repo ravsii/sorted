@@ -10,4 +10,6 @@ type RunnerConfig struct {
 	CheckVarSingleLine bool
 
 	CheckStruct bool
+
+	Report bool
 }

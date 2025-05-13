@@ -29,6 +29,15 @@ type (
 	Reporter func(analysis.Diagnostic)
 )
 
+type Checker interface {
+	Check(nodes nodes)
+}
+
+var (
+	_ Checker = (*checker)(nil)
+	_ Checker = (*noOpChecker)(nil)
+)
+
 type checker struct {
 	// Deprecated: use r
 	reportedOld ReporterOld
@@ -120,7 +129,7 @@ func (c *checker) CheckSingleLine(names []*ast.Ident, values []ast.Expr) {
 	}
 
 	if hasValues {
-		buf.WriteString(" := ")
+		buf.WriteString(" = ")
 
 		for i, p := range pairs {
 			if i > 0 {
@@ -163,3 +172,7 @@ func (c *checker) CheckSingleLine(names []*ast.Ident, values []ast.Expr) {
 		})
 	}
 }
+
+type noOpChecker struct{}
+
+func (*noOpChecker) Check(nodes) {}

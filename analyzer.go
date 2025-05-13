@@ -12,7 +12,7 @@ import (
 
 type Runner struct {
 	inspector *inspector.Inspector
-	checker   *checker
+	checker   Checker
 	config    *RunnerConfig
 }
 
@@ -25,7 +25,7 @@ func NewAnalyzer(config *RunnerConfig) *analysis.Analyzer {
 	}
 
 	if config == nil {
-		config = &RunnerConfig{}
+		config = &RunnerConfig{Report: true}
 
 		analyzer.Flags.BoolVar(&config.All,
 			"check-all", true, "Enable all checks")
@@ -60,6 +60,7 @@ func NewAnalyzer(config *RunnerConfig) *analysis.Analyzer {
 			CheckVar:             true,
 			CheckVarSingleLine:   true,
 			CheckStruct:          true,
+			Report:               config.Report,
 		}
 	}
 
@@ -81,7 +82,11 @@ func (r *Runner) Run(pass *analysis.Pass) (any, error) {
 		panic("bad inspector")
 	}
 
-	r.checker = newChecker(pass, pass)
+	if r.config.Report {
+		r.checker = newChecker(pass, pass)
+	} else {
+		r.checker = &noOpChecker{}
+	}
 
 	filter := []ast.Node{
 		(*ast.AssignStmt)(nil),

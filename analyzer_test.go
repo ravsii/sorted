@@ -19,5 +19,20 @@ func TestAnalyzer(t *testing.T) {
 	}
 
 	testdata := filepath.Join(wd, "tests")
-	analysistest.Run(t, testdata, sorted.NewAnalyzer(&sorted.RunnerConfig{All: true}), "tests")
+
+	t.Run("analyze", func(t *testing.T) {
+		t.Parallel()
+		analysistest.Run(
+			t, testdata, sorted.NewAnalyzer(&sorted.RunnerConfig{All: true, Report: true}), "tests")
+	})
+
+	t.Run("fixes", func(t *testing.T) {
+		t.Parallel()
+		analysistest.RunWithSuggestedFixes(
+			t,
+			testdata,
+			sorted.NewAnalyzer(&sorted.RunnerConfig{All: true, Report: false}),
+			"fixes",
+		)
+	})
 }

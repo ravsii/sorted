@@ -1,0 +1,30 @@
+package tests
+
+const A1 = 0
+
+const (
+	A2 = iota
+	B2
+)
+
+// const (
+// 	B3 = iota
+// 	A3
+// )
+
+// const (
+// 	A4 = iota
+// 	B4
+//
+// 	B5
+// 	A5
+// )
+
+const (
+	A6, B6, C6 = 0, 0, 0
+	A7, B7, C7 = 1, 2, 3
+)
+
+const A8, B8, C8 = 0, 0, 0
+
+const A9, B9, C9 = 1, 2, 3

@@ -22,9 +22,9 @@ const (
 
 const (
 	A6, B6, C6 = 0, 0, 0
-	C7, B7, A7 = 0, 0, 0 // want `single line idents are not sorted alphabetically`
+	C7, B7, A7 = 3, 2, 1 // want `single line idents are not sorted alphabetically`
 )
 
 const A8, B8, C8 = 0, 0, 0
 
-const C9, B9, A9 = 0, 0, 0 // want `single line idents are not sorted alphabetically`
+const C9, B9, A9 = 3, 2, 1 // want `single line idents are not sorted alphabetically`

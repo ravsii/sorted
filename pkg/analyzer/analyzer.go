@@ -1,117 +1,48 @@
-package sorted
+package analyzer
 
 import (
-	"fmt"
 	"go/ast"
 	"go/token"
 
+	"github.com/leonklingele/grouper/pkg/analyzer"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
 	"golang.org/x/tools/go/ast/inspector"
 )
 
-type Runner struct {
-	inspector *inspector.Inspector
-	checker   Checker
-	config    *RunnerConfig
+var (
+	disableConstBlocks bool
+	disableConstInline bool
+
+	disableVarBlocks bool
+	disableVarInline bool
+
+	disableStructs bool
+)
+
+var Analyzer = &analysis.Analyzer{
+	Name:     "sorted",
+	Doc:      "Checks if blocks (structs, consts, vars) and functions are sorted",
+	Run:      runAnalyzer,
+	Requires: []*analysis.Analyzer{inspect.Analyzer},
 }
 
-// default behaviour and explicit config.
-func NewAnalyzer(config *RunnerConfig) *analysis.Analyzer {
-	analyzer := &analysis.Analyzer{
-		Name:     "sorted",
-		Doc:      "Checks if blocks (structs, consts, vars) and functions are sorted",
-		Requires: []*analysis.Analyzer{inspect.Analyzer},
-	}
-
-	if config == nil {
-		config = &RunnerConfig{Report: true}
-
-		analyzer.Flags.BoolVar(&config.All,
-			"check-all", true, "Enable all checks")
-
-		analyzer.Flags.BoolVar(&config.CheckConst,
-			"check-const", false, "Check const() blocks")
-		analyzer.Flags.BoolVar(
-			&config.CheckConstSingleLine,
-			"check-const-single-line",
-			false,
-			"Check const blocks for multiple identifiers in a single line",
-		)
-
-		analyzer.Flags.BoolVar(&config.CheckVar,
-			"check-var", false, "Check var() blocks")
-		analyzer.Flags.BoolVar(
-			&config.CheckVarSingleLine,
-			"check-var-single-line",
-			false,
-			"Check var blocks for multiple identifiers in a single line",
-		)
-
-		analyzer.Flags.BoolVar(&config.CheckStruct,
-			"check-struct", false, "Check struct field order")
-	}
-
-	if config.All {
-		config = &RunnerConfig{ //exhaustive:enforce
-			All:                  true,
-			CheckConst:           true,
-			CheckConstSingleLine: true,
-			CheckVar:             true,
-			CheckVarSingleLine:   true,
-			CheckStruct:          true,
-			Report:               config.Report,
-		}
-	}
-
-	runner := NewRunner(config)
-	analyzer.Run = runner.Run
-
-	return analyzer
+func init() {
+	analyzer.Flags.BoolVar(disableConstBlocks, "disable-const-blocks", false, "disable checks for const() blocks")
+	analyzer.Flags.BoolVar(disableConstInline, "disable-const-inline", false, "disable checks for inline const declarations")
+	analyzer.Flags.BoolVar(disableVarBlocks, "disable-var-blocks", false, "disable checks for var() blocks")
+	analyzer.Flags.BoolVar(disableVarInline, "disable-var-inline", false, "disable checks for inline var declarations")
+	analyzer.Flags.BoolVar(disableStructs, "disable-structs", false, "disable checks for struct fields")
 }
 
-func NewRunner(c *RunnerConfig) Runner {
-	return Runner{config: c}
-}
-
-func (r *Runner) Run(pass *analysis.Pass) (any, error) {
-	var ok bool
-
-	r.inspector, ok = pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+func runAnalyzer(pass *analysis.Pass) (interface{}, error) {
+	inspector, ok := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
 	if !ok {
 		panic("bad inspector")
 	}
 
-	if r.config.Report {
-		r.checker = newChecker(pass, pass)
-	} else {
-		r.checker = &noOpChecker{}
-	}
-
-	filter := []ast.Node{
-		(*ast.AssignStmt)(nil),
-		(*ast.GenDecl)(nil),
-		(*ast.StructType)(nil),
-		(*ast.FuncType)(nil),
-		(*ast.SwitchStmt)(nil),
-	}
-
-	r.inspector.Preorder(filter, func(node ast.Node) {
-		switch node := node.(type) {
-		case *ast.AssignStmt:
-			r.validateAssignStmt(pass, node)
-		case *ast.GenDecl:
-			r.validateGenDecl(pass, node)
-		case *ast.SwitchStmt:
-			validateSwitchStmt(pass, node)
-		case *ast.StructType:
-			r.validateStruct(pass, node)
-		case *ast.FuncType:
-			r.validateFuncDecl(pass, node)
-		default:
-			fmt.Printf("unexpected type %T\n", node)
-		}
-	})
+	visitor := Visitor{}
+	inspector.Preorder(visitor.Filter(), visitor.Visit)
 
 	return nil, nil
 }

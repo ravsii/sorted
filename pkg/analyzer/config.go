@@ -1,4 +1,4 @@
-package sorted
+package analyzer
 
 type RunnerConfig struct {
 	All bool

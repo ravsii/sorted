@@ -1,4 +1,4 @@
-package sorted
+package analyzer
 
 import "go/ast"
 

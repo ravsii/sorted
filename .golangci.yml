@@ -44,8 +44,6 @@ linters:
     - funcorder
     - ginkgolinter
     - gocheckcompilerdirectives
-    - gochecknoglobals
-    - gochecknoinits
     - gochecksumtype
     - gocognit
     - goconst

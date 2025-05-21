@@ -46,13 +46,24 @@ These checks are working for `const`, `var`, `struct` blocks.
 
 ## TODO
 
-- [x] Options for turning stuff on/off
-  - Partially done, more options will be added later
 - [x] `const`, `var`
-  - [x] Alphabetical sorting
+  - [ ] Blocks
+    - [x] Alphabetical sorting
+    - [ ] Auto Fix
+  - [ ] Inline
+    - [ ] Alphabetical sorting
+    - [ ] Auto Fix
 - [x] `struct`
   - [x] Alphabetical sorting
-- [ ] `switch` (maybe?)
+  - [ ] Auto Fix
+- [ ] `//sorted:ignore` comment
+
+### TODO later
+
+in order of most importance
+
+- [ ] `golangci-lint` integration
+- [ ] `switch` only for basic type values (string, int, ...)
 - [ ] `imports` (pretty much what gci does with some more)
 - [ ] `func`
   - Alphabetical sorting
